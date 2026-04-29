@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Concentration Grid Focus Test</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+      color: #f8fafc;
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-bottom: 16px;
+    }
+
+    /* ── Controls Bar ── */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      background: #1e293b;
+      padding: 12px 18px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .controls label {
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+
+    select {
+      background: #0f172a;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    button {
+      padding: 7px 16px;
+      border: none;
+      border-radius: 7px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+
+    button:hover { opacity: 0.88; transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+
+    .btn-start   { background: #3b82f6; color: #fff; }
+    .btn-progress{ background: #8b5cf6; color: #fff; }
+
+    /* ── Stats Strip ── */
+    .stats {
+      display: flex;
+      gap: 24px;
+      margin-left: auto;
+      font-size: 0.9rem;
+    }
+
+    .stat-item span {
+      font-weight: 700;
+      color: #38bdf8;
+    }
+
+    .stat-item.errors span { color: #f87171; }
+
+    /* ── Instructions ── */
+    .instructions {
+      font-size: 0.82rem;
+      color: #64748b;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    /* ── Grid ── */
+    #grid-container {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 12px;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .cell {
+      background: #1e293b;
+      border: 2px solid #334155;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #cbd5e1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      aspect-ratio: 1;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+      user-select: none;
+    }
+
+    .cell:hover:not(.done):not(.error-flash) {
+      border-color: #3b82f6;
+      color: #fff;
+      transform: scale(1.05);
+    }
+
+    .cell.done {
+      background: #14532d;
+      border-color: #22c55e;
+      color: #86efac;
+      cursor: default;
+    }
+
+    .cell.error-flash {
+      background: #7f1d1d;
+      border-color: #ef4444;
+      color: #fca5a5;
+    }
+
+    /* ── Status Bar ── */
+    #status {
+      font-size: 0.88rem;
+      color: #94a3b8;
+      min-height: 1.2em;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    /* ── Modal Overlay ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 28px 32px;
+      max-width: 680px;
+      width: 95%;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .modal h2 {
+      font-size: 1.25rem;
+      margin-bottom: 6px;
+      color: #f8fafc;
+    }
+
+    .modal .close-btn {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      background: #334155;
+      color: #e2e8f0;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.85rem;
+    }
+
+    /* ── Result Modal ── */
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 18px 0;
+    }
+
+    .result-card {
+      background: #0f172a;
+      border-radius: 10px;
+      padding: 14px 16px;
+      text-align: center;
+    }
+
+    .result-card .value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+
+    .result-card .label {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
+    .result-card.errors .value { color: #f87171; }
+    .result-card.avg    .value { color: #a78bfa; }
+    .result-card.speed  .value { color: #34d399; }
+
+    /* ── Chart ── */
+    .chart-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .chart-controls label { font-size: 0.85rem; color: #94a3b8; }
+
+    canvas#progressChart {
+      width: 100% !important;
+      background: #0f172a;
+      border-radius: 10px;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 12px;
+      font-size: 0.8rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .legend-dash {
+      width: 20px;
+      height: 2px;
+      border-top: 2px dashed;
+    }
+
+    .no-data {
+      text-align: center;
+      color: #475569;
+      padding: 40px 0;
+      font-size: 0.95rem;
+    }
+
+    /* ── Responsive font scaling for grid cells ── */
+    @media (max-width: 480px) {
+      .cell { font-size: 0.85rem; }
+      h1 { font-size: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Concentration Grid</h1>
+  <p class="subtitle">Click numbers in order starting from 00 — as fast as you can.</p>
+
+  <!-- Controls -->
+  <div class="controls">
+    <label for="sizeSelect">Grid Size</label>
+    <select id="sizeSelect">
+      <option value="3">3 × 3</option>
+      <option value="4">4 × 4</option>
+      <option value="5" selected>5 × 5</option>
+      <option value="10">10 × 10</option>
+    </select>
+
+    <button class="btn-start"    id="btnStart">Start Again</button>
+    <button class="btn-progress" id="btnProgress">View Progress</button>
+
+    <div class="stats">
+      <div class="stat-item">⏱ <span id="timerDisplay">0.00s</span></div>
+      <div class="stat-item errors">✗ <span id="errorDisplay">0</span></div>
+    </div>
+  </div>
+
+  <p class="instructions">Timer starts when you click <strong>00</strong>.</p>
+
+  <!-- Number Grid -->
+  <div id="grid-container"></div>
+
+  <div id="status">Ready — click 00 to begin</div>
+
+  <!-- ── Result Modal ── -->
+  <div class="modal-overlay" id="resultModal">
+    <div class="modal">
+      <button class="close-btn" id="closeResult">Close</button>
+      <h2>🎉 Complete!</h2>
+      <div class="result-grid">
+        <div class="result-card">
+          <div class="value" id="res-time">—</div>
+          <div class="label">Total Time</div>
+        </div>
+        <div class="result-card errors">
+          <div class="value" id="res-errors">—</div>
+          <div class="label">Wrong Clicks</div>
+        </div>
+        <div class="result-card avg">
+          <div class="value" id="res-avg">—</div>
+          <div class="label">Avg Time / Click</div>
+        </div>
+        <div class="result-card speed">
+          <div class="value" id="res-speed">—</div>
+          <div class="label">Clicks / Second</div>
+        </div>
+      </div>
+      <p style="font-size:0.8rem;color:#475569;text-align:center;">
+        Result saved — click <strong>View Progress</strong> to see your trendline.
+      </p>
+    </div>
+  </div>
+
+  <!-- ── Progress Modal ── -->
+  <div class="modal-overlay" id="progressModal">
+    <div class="modal">
+      <button class="close-btn" id="closeProgress">Close</button>
+      <h2>📈 Progress Tracker</h2>
+      <p style="font-size:0.8rem;color:#64748b;margin-bottom:14px;">
+        Lower avg click time = faster focus. Dashed line = trendline.
+      </p>
+
+      <div class="chart-controls">
+        <label>Metric:</label>
+        <select id="metricSelect">
+          <option value="avg">Avg Click Time (s)</option>
+          <option value="total">Total Time (s)</option>
+          <option value="errors">Wrong Clicks</option>
+        </select>
+        <button class="btn-start" id="btnClearData"
+          style="background:#dc2626;font-size:0.8rem;padding:5px 12px;">
+          Clear All Data
+        </button>
+      </div>
+
+      <div id="chartArea">
+        <canvas id="progressChart" height="320"></canvas>
+      </div>
+      <div class="legend" id="chartLegend"></div>
+    </div>
+  </div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  CONSTANTS & CONFIG
+// ═══════════════════════════════════════════════
+const COOKIE_KEY = 'cgrid_results_v1';
+const COOKIE_DAYS = 365;
+
+const GRID_COLORS = {
+  '3':  { line: '#2ecc71', trend: '#27ae60' },
+  '4':  { line: '#3b82f6', trend: '#2563eb' },
+  '5':  { line: '#a78bfa', trend: '#7c3aed' },
+  '10': { line: '#f87171', trend: '#dc2626' },
+};
+
+// ═══════════════════════════════════════════════
+//  COOKIE STORAGE
+//  Stores an array of result objects as JSON in a cookie.
+// ═══════════════════════════════════════════════
+
+/** Save the full results array to a cookie. */
+function saveResults(results) {
+  const json   = JSON.stringify(results);
+  const expires = new Date(Date.now() + COOKIE_DAYS * 864e5).toUTCString();
+  // encodeURIComponent handles any special chars in JSON
+  document.cookie = `${COOKIE_KEY}=${encodeURIComponent(json)};expires=${expires};path=/;SameSite=Lax`;
+}
+
+/** Load the results array from cookie. Returns [] if none found. */
+function loadResults() {
+  const match = document.cookie
+    .split('; ')
+    .find(row => row.startsWith(COOKIE_KEY + '='));
+  if (!match) return [];
+  try {
+    return JSON.parse(decodeURIComponent(match.split('=').slice(1).join('=')));
+  } catch {
+    return [];
+  }
+}
+
+/** Append a single result object and persist. */
+function appendResult(entry) {
+  const all = loadResults();
+  all.push(entry);
+  saveResults(all);
+}
+
+/** Wipe all stored results. */
+function clearResults() {
+  document.cookie = `${COOKIE_KEY}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/`;
+}
+
+// ═══════════════════════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════════════════════
+let gridSize      = 5;
+let numbers       = [];       // shuffled number at each cell index
+let currentTarget = 0;
+let startTime     = null;
+let timerInterval = null;
+let wrongClicks   = 0;
+let clickTimes    = [];       // ms timestamps of each correct click
+let gameActive    = false;
+
+// ═══════════════════════════════════════════════
+//  DOM REFS
+// ═══════════════════════════════════════════════
+const gridContainer  = document.getElementById('grid-container');
+const timerDisplay   = document.getElementById('timerDisplay');
+const errorDisplay   = document.getElementById('errorDisplay');
+const statusEl       = document.getElementById('status');
+
+const resultModal    = document.getElementById('resultModal');
+const progressModal  = document.getElementById('progressModal');
+
+// ═══════════════════════════════════════════════
+//  GRID GENERATION
+// ═══════════════════════════════════════════════
+
+/** Fisher-Yates shuffle */
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/** Build (or rebuild) the grid. */
+function generateGrid() {
+  // Reset state
+  currentTarget = 0;
+  startTime     = null;
+  wrongClicks   = 0;
+  clickTimes    = [];
+  gameActive    = false;
+
+  clearInterval(timerInterval);
+  timerDisplay.textContent = '0.00s';
+  errorDisplay.textContent = '0';
+  statusEl.textContent     = 'Ready — click 00 to begin';
+
+  const total = gridSize * gridSize;
+  numbers = shuffle([...Array(total).keys()]);
+
+  // Responsive font size
+  const fontSize =
+    gridSize <= 4  ? '1.2rem' :
+    gridSize <= 5  ? '1rem'   : '0.78rem';
+
+  gridContainer.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+  gridContainer.style.maxWidth =
+    gridSize <= 4  ? '360px' :
+    gridSize <= 5  ? '440px' : '660px';
+
+  gridContainer.innerHTML = '';
+
+  numbers.forEach((num, idx) => {
+    const cell = document.createElement('div');
+    cell.className   = 'cell';
+    cell.textContent = String(num).padStart(2, '0');
+    cell.style.fontSize = fontSize;
+    cell.dataset.num = num;
+
+    cell.addEventListener('click', () => onCellClick(num, cell));
+    gridContainer.appendChild(cell);
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  CLICK HANDLER
+// ═══════════════════════════════════════════════
+function onCellClick(num, cell) {
+  if (cell.classList.contains('done')) return;
+
+  if (num === currentTarget) {
+    // ── Correct ──────────────────────────────
+    if (currentTarget === 0) {
+      // First click: start timer
+      startTime   = performance.now();
+      gameActive  = true;
+      statusEl.textContent = 'Go!';
+      timerInterval = setInterval(() => {
+        timerDisplay.textContent =
+          ((performance.now() - startTime) / 1000).toFixed(2) + 's';
+      }, 50);
+    }
+
+    clickTimes.push(performance.now());
+    cell.classList.add('done');
+    currentTarget++;
+
+    const total = gridSize * gridSize;
+    if (currentTarget >= total) {
+      finishGame();
+    }
+
+  } else {
+    // ── Wrong ────────────────────────────────
+    if (!gameActive) {
+      statusEl.textContent = 'Click 00 to start!';
+      return;
+    }
+    wrongClicks++;
+    errorDisplay.textContent = wrongClicks;
+    statusEl.textContent = `Wrong! Find ${String(currentTarget).padStart(2,'0')}`;
+
+    cell.classList.add('error-flash');
+    setTimeout(() => cell.classList.remove('error-flash'), 220);
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  GAME COMPLETE
+// ═══════════════════════════════════════════════
+function finishGame() {
+  clearInterval(timerInterval);
+  gameActive = false;
+
+  const endTime   = performance.now();
+  const totalMs   = endTime - startTime;
+  const totalSec  = totalMs / 1000;
+
+  // Average interval between consecutive correct clicks
+  let avgSec = totalSec;
+  if (clickTimes.length > 1) {
+    let sum = 0;
+    for (let i = 1; i < clickTimes.length; i++) {
+      sum += clickTimes[i] - clickTimes[i - 1];
+    }
+    avgSec = sum / (clickTimes.length - 1) / 1000;
+  }
+
+  const clicksPerSec = (gridSize * gridSize / totalSec).toFixed(2);
+
+  // Save to cookie
+  appendResult({
+    date:        new Date().toISOString(),
+    gridSize:    String(gridSize),
+    totalTime:   +totalSec.toFixed(3),
+    wrongClicks: wrongClicks,
+    avgClick:    +avgSec.toFixed(4),
+  });
+
+  // Populate result modal
+  document.getElementById('res-time').textContent   = totalSec.toFixed(2) + 's';
+  document.getElementById('res-errors').textContent = wrongClicks;
+  document.getElementById('res-avg').textContent    = avgSec.toFixed(3) + 's';
+  document.getElementById('res-speed').textContent  = clicksPerSec + '/s';
+
+  statusEl.textContent = 'Complete! 🎉';
+  timerDisplay.textContent = totalSec.toFixed(2) + 's';
+
+  openModal(resultModal);
+}
+
+// ═══════════════════════════════════════════════
+//  PROGRESS CHART
+// ═══════════════════════════════════════════════
+
+/**
+ * Group results by grid size, assign per-size session numbers,
+ * return: { '3': [{session, value}, ...], '5': [...], ... }
+ */
+function groupBySize(results, metric) {
+  const grouped = {};
+  const counts  = {};
+
+  results.forEach(r => {
+    const key = r.gridSize;
+    if (!grouped[key]) { grouped[key] = []; counts[key] = 0; }
+    counts[key]++;
+    const value =
+      metric === 'avg'    ? r.avgClick    :
+      metric === 'total'  ? r.totalTime   : r.wrongClicks;
+    grouped[key].push({ session: counts[key], value });
+  });
+
+  return grouped;
+}
+
+/**
+ * Simple linear regression.
+ * Returns { m (slope), b (intercept) } or null if not computable.
+ */
+function linearRegression(points) {
+  const n = points.length;
+  if (n < 2) return null;
+
+  const sumX  = points.reduce((a, p) => a + p.x, 0);
+  const sumY  = points.reduce((a, p) => a + p.y, 0);
+  const sumXY = points.reduce((a, p) => a + p.x * p.y, 0);
+  const sumX2 = points.reduce((a, p) => a + p.x * p.x, 0);
+
+  const denom = n * sumX2 - sumX * sumX;
+  if (denom === 0) return null;
+
+  const m = (n * sumXY - sumX * sumY) / denom;
+  const b = (sumY - m * sumX) / n;
+  return { m, b };
+}
+
+/** Draw the progress chart onto the canvas. */
+function drawChart() {
+  const canvas  = document.getElementById('progressChart');
+  const ctx     = canvas.getContext('2d');
+  const metric  = document.getElementById('metricSelect').value;
+  const results = loadResults();
+  const legend  = document.getElementById('chartLegend');
+  legend.innerHTML = '';
+
+  // Scale canvas to its displayed size for crisp rendering
+  const W = canvas.clientWidth || 600;
+  const H = 320;
+  canvas.width  = W;
+  canvas.height = H;
+
+  // Background
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 0, W, H);
+
+  if (results.length === 0) {
+    ctx.fillStyle = '#475569';
+    ctx.font = '14px Segoe UI, Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('No data yet — complete a game to see progress!', W / 2, H / 2);
+    return;
+  }
+
+  const grouped = groupBySize(results, metric);
+
+  // Flatten all points to find global axis ranges
+  const allValues   = Object.values(grouped).flat().map(p => p.value);
+  const allSessions = Object.values(grouped).flat().map(p => p.session);
+
+  const minVal  = 0;
+  const maxVal  = Math.max(...allValues) * 1.15 || 1;
+  const minSess = 1;
+  const maxSess = Math.max(...allSessions, 1);
+
+  // Chart margins
+  const ml = 55, mr = 20, mt = 20, mb = 45;
+  const cw = W - ml - mr;
+  const ch = H - mt - mb;
+
+  // Coordinate helpers
+  const toX = s => ml + ((s - minSess) / Math.max(maxSess - minSess, 1)) * cw;
+  const toY = v => mt + (1 - (v - minVal) / (maxVal - minVal)) * ch;
+
+  // ── Grid lines & Y axis ──────────────────────
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth   = 1;
+  const yTicks = 5;
+  for (let i = 0; i <= yTicks; i++) {
+    const v = minVal + (maxVal - minVal) * (i / yTicks);
+    const y = toY(v);
+
+    ctx.beginPath();
+    ctx.moveTo(ml, y);
+    ctx.lineTo(ml + cw, y);
+    ctx.stroke();
+
+    ctx.fillStyle  = '#64748b';
+    ctx.font       = '11px Segoe UI, Arial';
+    ctx.textAlign  = 'right';
+    ctx.fillText(
+      metric === 'errors' ? Math.round(v) : v.toFixed(2) + 's',
+      ml - 6, y + 4
+    );
+  }
+
+  // ── X axis labels ────────────────────────────
+  const xStep = Math.max(1, Math.ceil(maxSess / 10));
+  for (let s = minSess; s <= maxSess; s += xStep) {
+    const x = toX(s);
+    ctx.fillStyle = '#64748b';
+    ctx.font      = '11px Segoe UI, Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(s, x, H - mb + 18);
+  }
+
+  // Axis labels
+  ctx.fillStyle = '#94a3b8';
+  ctx.font      = '12px Segoe UI, Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('Session', ml + cw / 2, H - 4);
+
+  // Y label (rotated)
+  ctx.save();
+  ctx.translate(12, mt + ch / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center';
+  ctx.fillText(
+    metric === 'avg'   ? 'Avg Click (s)' :
+    metric === 'total' ? 'Total Time (s)' : 'Wrong Clicks',
+    0, 0
+  );
+  ctx.restore();
+
+  // ── Axes ─────────────────────────────────────
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth   = 2;
+  ctx.beginPath();
+  ctx.moveTo(ml, mt); ctx.lineTo(ml, mt + ch);
+  ctx.lineTo(ml + cw, mt + ch);
+  ctx.stroke();
+
+  // ── Data per grid size ────────────────────────
+  Object.entries(grouped).sort().forEach(([size, points]) => {
+    const colors = GRID_COLORS[size] || { line: '#fff', trend: '#aaa' };
+
+    // Sort by session
+    points.sort((a, b) => a.session - b.session);
+
+    const canvasPts = points.map(p => ({ cx: toX(p.session), cy: toY(p.value) }));
+    const regPts    = points.map(p => ({ x: p.session, y: p.value }));
+    const reg       = linearRegression(regPts);
+
+    // Connecting line
+    if (canvasPts.length > 1) {
+      ctx.strokeStyle = colors.line;
+      ctx.lineWidth   = 2;
+      ctx.beginPath();
+      canvasPts.forEach((p, i) =>
+        i === 0 ? ctx.moveTo(p.cx, p.cy) : ctx.lineTo(p.cx, p.cy)
+      );
+      ctx.stroke();
+    }
+
+    // Trendline (dashed)
+    if (reg) {
+      const ty1 = reg.m * minSess + reg.b;
+      const ty2 = reg.m * maxSess + reg.b;
+
+      ctx.strokeStyle = colors.trend;
+      ctx.lineWidth   = 2;
+      ctx.setLineDash([7, 5]);
+      ctx.beginPath();
+      ctx.moveTo(toX(minSess), toY(ty1));
+      ctx.lineTo(toX(maxSess), toY(ty2));
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Dots
+    canvasPts.forEach(p => {
+      ctx.fillStyle   = colors.line;
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth   = 2;
+      ctx.beginPath();
+      ctx.arc(p.cx, p.cy, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    });
+
+    // Legend entry
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `
+      <span class="legend-dot" style="background:${colors.line}"></span>
+      <span>${size}×${size} (${points.length} session${points.length !== 1 ? 's' : ''})</span>
+      ${reg ? `<span class="legend-dash" style="border-color:${colors.trend}"></span><span>trend</span>` : ''}
+    `;
+    legend.appendChild(item);
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  MODAL HELPERS
+// ═══════════════════════════════════════════════
+function openModal(modal)  { modal.classList.add('open'); }
+function closeModal(modal) { modal.classList.remove('open'); }
+
+// ═══════════════════════════════════════════════
+//  EVENT LISTENERS
+// ═══════════════════════════════════════════════
+document.getElementById('btnStart').addEventListener('click', () => {
+  gridSize = parseInt(document.getElementById('sizeSelect').value);
+  generateGrid();
+});
+
+document.getElementById('sizeSelect').addEventListener('change', e => {
+  gridSize = parseInt(e.target.value);
+  generateGrid();
+});
+
+document.getElementById('btnProgress').addEventListener('click', () => {
+  openModal(progressModal);
+  // Small delay lets the modal render before we read canvas dimensions
+  setTimeout(drawChart, 60);
+});
+
+document.getElementById('closeResult').addEventListener('click', () => {
+  closeModal(resultModal);
+});
+
+document.getElementById('closeProgress').addEventListener('click', () => {
+  closeModal(progressModal);
+});
+
+document.getElementById('metricSelect').addEventListener('change', drawChart);
+
+document.getElementById('btnClearData').addEventListener('click', () => {
+  if (confirm('Delete all saved progress? This cannot be undone.')) {
+    clearResults();
+    drawChart();
+  }
+});
+
+// Close modals when clicking the dark overlay behind them
+[resultModal, progressModal].forEach(modal => {
+  modal.addEventListener('click', e => {
+    if (e.target === modal) closeModal(modal);
+  });
+});
+
+// Redraw chart if the window is resized while the progress modal is open
+window.addEventListener('resize', () => {
+  if (progressModal.classList.contains('open')) drawChart();
+});
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+generateGrid();
+</script>
+</body>
+</html>
